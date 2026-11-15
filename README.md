@@ -67,3 +67,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File assets/make-icons.ps1
 ```
 
 This regenerates `windows/icons/*` (32×32 raw RGBA files embedded in the exe, plus PNG previews and `app.ico`) and `macos/CoffeeBar/Assets.xcassets`.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
