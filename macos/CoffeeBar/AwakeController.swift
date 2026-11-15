@@ -94,17 +94,28 @@ final class AwakeController {
         let info = Bundle.main.infoDictionary ?? [:]
         let build = "\(info["CFBundleShortVersionString"] ?? "")-\(info["CFBundleVersion"] ?? "")"
         let key = "helperRegisteredBuild"
-        do {
-            switch daemon.status {
-            case .notRegistered, .notFound: // a never-registered daemon reports .notFound on macOS 27
-                try daemon.register()
-            default:
-                guard UserDefaults.standard.string(forKey: key) != build else { break }
-                try? daemon.unregister()
-                try daemon.register()
+        let daemon = self.daemon
+        func register() {
+            // Also throws while approval is pending; the registration still happens.
+            do { try daemon.register() } catch { NSLog("coffee-bar: helper register: \(error)") }
+        }
+        switch daemon.status {
+        case .notRegistered, .notFound: // a never-registered daemon reports .notFound on macOS 27
+            register()
+        default:
+            guard UserDefaults.standard.string(forKey: key) != build else { break }
+            // Register only once the old registration is gone. Right after that, register() can
+            // still fail while macOS settles; retrying keeps the earlier approval.
+            daemon.unregister { _ in
+                DispatchQueue.main.async {
+                    func attempt(_ left: Int) {
+                        register()
+                        guard daemon.status != .enabled, left > 0 else { return }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { attempt(left - 1) }
+                    }
+                    attempt(5)
+                }
             }
-        } catch {
-            NSLog("coffee-bar: helper register: \(error)") // also thrown while approval is pending
         }
         UserDefaults.standard.set(build, forKey: key)
     }

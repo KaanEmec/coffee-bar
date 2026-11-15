@@ -83,14 +83,15 @@ if [ "$launch" = 1 ]; then
     open "$app"
     echo "   Look for the cup in the menu bar (it can hide behind the notch if the bar is full)."
 fi
-# The app starts its closed-lid helper right after launch. If launchd isn't running it, the helper
-# needs approval: on a fresh install, and again after an update (macOS asks again when the app
-# changes). Then open the page where it is approved.
+# The app registers its closed-lid helper on launch (again after an update). Once approved,
+# launchd has the job loaded and it doesn't fail with EX_CONFIG. If that doesn't happen within a
+# few seconds, the helper still needs approval: open the page where it is given.
 if [ "$launch" = 1 ]; then
-    for _ in 1 2 3 4 5 6; do
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
         sleep 1
-        launchctl print system/com.coffeebar.helper 2>/dev/null | grep -q "state = running" && exit 0
+        job=$(launchctl print system/com.coffeebar.helper 2>/dev/null) || continue
+        [[ "$job" == *EX_CONFIG* ]] || exit 0
     done
     open "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
-    printf '\n\033[1m👉 Turn on CoffeeBar under "Allow in the Background"\033[0m (System Settings → General →\n   Login Items & Extensions). This enables closed-lid mode; macOS asks again after each update.\n'
+    printf '\n\033[1m👉 One time: turn on CoffeeBar under "Allow in the Background"\033[0m (System Settings →\n   General → Login Items & Extensions). This enables closed-lid mode.\n'
 fi
