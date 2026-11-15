@@ -16,10 +16,9 @@ final class AwakeController {
     private var connection: NSXPCConnection? // kept open while the app runs; its loss tells the helper to clean up
 
     var lidMode: LidMode {
-        // A never-registered daemon reports .notFound (seen on macOS 27), not .notRegistered.
-        if (daemon.status == .notRegistered || daemon.status == .notFound) && !triedRegister {
+        if !triedRegister {
             triedRegister = true
-            do { try daemon.register() } catch { NSLog("coffee-bar: helper register: \(error)") }
+            registerHelper()
         }
         switch daemon.status {
         case .enabled: return .available
@@ -87,6 +86,28 @@ final class AwakeController {
     }
 
     // MARK: - Private
+
+    /// Registers the helper on first use, and again on the first launch of a new app build:
+    /// launchd keeps the launch constraint of the build it registered and refuses to start an
+    /// updated helper (EX_CONFIG) until it is re-registered. macOS then asks for approval again.
+    private func registerHelper() {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let build = "\(info["CFBundleShortVersionString"] ?? "")-\(info["CFBundleVersion"] ?? "")"
+        let key = "helperRegisteredBuild"
+        do {
+            switch daemon.status {
+            case .notRegistered, .notFound: // a never-registered daemon reports .notFound on macOS 27
+                try daemon.register()
+            default:
+                guard UserDefaults.standard.string(forKey: key) != build else { break }
+                try? daemon.unregister()
+                try daemon.register()
+            }
+        } catch {
+            NSLog("coffee-bar: helper register: \(error)") // also thrown while approval is pending
+        }
+        UserDefaults.standard.set(build, forKey: key)
+    }
 
     private func releaseAssertion() {
         if let id = assertionID {
