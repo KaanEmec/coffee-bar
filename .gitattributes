@@ -1,0 +1,2 @@
+# Shell scripts must keep LF endings, also when checked out on Windows (the release workflow uploads install.sh).
+*.sh text eol=lf
