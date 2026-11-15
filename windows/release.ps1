@@ -27,6 +27,9 @@ if (-not $bin) {
     $bin = $clang.DirectoryName
 }
 $env:WINDRES = "$bin\llvm-windres.exe"
+# build.rs runs on the host, which is the GNU toolchain: it links with the LLVM-MinGW clang driver, which has no libgcc.
+# Point it at the libgcc/libgcc_eh shipped with Rust's own x86_64-pc-windows-gnu sysroot.
+$env:LIBRARY_PATH = (rustc --print sysroot).Trim() + '\lib\rustlib\x86_64-pc-windows-gnu\lib\self-contained'
 foreach ($t in 'X86_64', 'AARCH64') {
     $cc = $t.ToLower()
     Set-Item "env:CARGO_TARGET_${t}_PC_WINDOWS_GNULLVM_LINKER" "$bin\$cc-w64-mingw32-clang.exe"
