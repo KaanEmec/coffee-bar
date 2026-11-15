@@ -85,10 +85,6 @@ final class AwakeController {
         do { try process.run() } catch { NSLog("coffee-bar: pmset sleepnow: \(error)") }
     }
 
-    func openApprovalSettings() {
-        SMAppService.openSystemSettingsLoginItems()
-    }
-
     // MARK: - Private
 
     private func releaseAssertion() {

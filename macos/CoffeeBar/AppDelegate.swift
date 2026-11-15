@@ -32,6 +32,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+        // Single instance: a second copy quits before it touches anything.
+        if NSRunningApplication.runningApplications(withBundleIdentifier: appBundleID).count > 1 {
+            NSApp.terminate(nil)
+            return
+        }
 
         UserDefaults.standard.register(defaults: [Self.heatFuseKey: true])
         awake.recoverIfNeeded()
@@ -74,7 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 select(.custom(duration))
             }
         case .enableLidMode:
-            awake.openApprovalSettings()
+            SMAppService.openSystemSettingsLoginItems()
         case .heatFuse:
             UserDefaults.standard.set(!heatFuseOn, forKey: Self.heatFuseKey)
             fuse.reset()
@@ -144,7 +149,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func checkHeat(now: Date) {
         let readings = thermal.read()
-        temperature = readings.filter(Fuse.isPlausible).max { $0.celsius < $1.celsius }.map(Fuse.label)
+        temperature = readings.max { $0.celsius < $1.celsius }.map(Fuse.label)
         guard heatFuseOn,
               let reason = fuse.check(readings, critical: thermal.thermalCritical, now: now) else { return }
         goIdle()

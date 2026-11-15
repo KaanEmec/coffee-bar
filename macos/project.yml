@@ -27,9 +27,11 @@ targets:
             destination: wrapper
             subpath: Contents/Library/LaunchDaemons
     dependencies:
+      # Copy Files phase: helper binary -> Contents/MacOS, re-signed with the app's identity.
       - target: CoffeeBarHelper
         embed: true
         link: false
+        codeSign: true
         copy:
           destination: executables   # Contents/MacOS
       - sdk: IOKit.framework

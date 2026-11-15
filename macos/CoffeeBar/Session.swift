@@ -84,11 +84,6 @@ struct Fuse {
         self.isAppleSilicon = isAppleSilicon
     }
 
-    /// Readings outside (0, 150] °C are sensor glitches.
-    static func isPlausible(_ r: Reading) -> Bool {
-        r.celsius > 0 && r.celsius <= 150
-    }
-
     /// "CPU 72°C"
     static func label(_ r: Reading) -> String {
         "\(name(r.sensor)) \(Int(r.celsius.rounded()))°C"
@@ -102,7 +97,7 @@ struct Fuse {
     /// they never trip the fuse and never reset a timer. A missing sensor resets nothing either.
     mutating func check(_ readings: [Reading], critical: Bool, now: Date) -> String? {
         var probes: [(key: String, hot: Bool, hold: TimeInterval, text: String)] = []
-        for r in readings where Fuse.isPlausible(r) {
+        for r in readings where r.celsius > 0 && r.celsius <= 150 { // else a sensor glitch
             let (limit, hold) = limits(r.sensor)
             probes.append((Fuse.name(r.sensor), r.celsius >= limit, hold, Fuse.label(r)))
         }

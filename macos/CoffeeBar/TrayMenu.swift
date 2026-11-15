@@ -22,8 +22,9 @@ final class TrayMenu: NSObject, NSMenuDelegate {
 
     override init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        idleImage = TrayMenu.barImage("MenuIdle", fallback: "cup.and.saucer")
-        activeImage = TrayMenu.barImage("MenuActive", fallback: "cup.and.saucer.fill")
+        // Template images (set in the asset catalog), so macOS tints them for the menu bar.
+        idleImage = NSImage(named: "MenuIdle")
+        activeImage = NSImage(named: "MenuActive")
         super.init()
 
         let menu = NSMenu()
@@ -120,13 +121,5 @@ final class TrayMenu: NSObject, NSMenuDelegate {
         item.image = symbol.flatMap { NSImage(systemSymbolName: $0, accessibilityDescription: nil) }
         item.action = action
         item.target = self
-    }
-
-    /// Template image from the asset catalog, or an SF Symbol if the asset is missing.
-    private static func barImage(_ name: String, fallback: String) -> NSImage? {
-        let image = NSImage(named: name)
-            ?? NSImage(systemSymbolName: fallback, accessibilityDescription: "coffee-bar")
-        image?.isTemplate = true
-        return image
     }
 }

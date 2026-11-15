@@ -8,9 +8,9 @@ struct Reading { let sensor: Sensor; let celsius: Double }
 /// Intel: AppleSMC. Battery: IORegistry AppleSmartBattery, else the HID "gas gauge battery" sensor.
 final class ThermalMonitor {
     let isAppleSilicon: Bool
-    private(set) var available = false
 
-    private var hidClient: AnyObject?          // owns the HID services below
+    // HID objects are CF objects; ARC owns them. The client must outlive its services.
+    private var hidClient: AnyObject?
     private var cpuServices: [AnyObject] = []
     private var batteryService: AnyObject?
     private var smc: io_connect_t = 0
@@ -25,7 +25,6 @@ final class ThermalMonitor {
         isAppleSilicon = sysctlbyname("hw.optional.arm64", &arm64, &size, nil, 0) == 0 && arm64 == 1
         openHID()
         if !isAppleSilicon { openSMC() }
-        available = !read().isEmpty
     }
 
     deinit {
@@ -50,14 +49,15 @@ final class ThermalMonitor {
     private static let temperatureField: Int32 = 15 << 16  // IOHIDEventFieldBase(kIOHIDEventTypeTemperature)
 
     private func openHID() {
-        guard let client = owned(IOHIDEventSystemClientCreate(kCFAllocatorDefault)) else { return }
+        // Create/Copy results are +1 and imported as Unmanaged (see Bridging-Header.h).
+        guard let client = IOHIDEventSystemClientCreate(kCFAllocatorDefault)?.takeRetainedValue() else { return }
         hidClient = client
-        _ = IOHIDEventSystemClientSetMatching(ref(client), ["PrimaryUsagePage": 0xff00, "PrimaryUsage": 5] as CFDictionary)
-        let services = owned(IOHIDEventSystemClientCopyServices(ref(client))) as? [AnyObject] ?? []
+        _ = IOHIDEventSystemClientSetMatching(client, ["PrimaryUsagePage": 0xff00, "PrimaryUsage": 5] as CFDictionary)
+        let services = IOHIDEventSystemClientCopyServices(client)?.takeRetainedValue() as? [AnyObject] ?? []
         var tdie: [AnyObject] = []
         var fallback: [AnyObject] = []
         for service in services {
-            guard let name = owned(IOHIDServiceClientCopyProperty(ref(service), "Product" as CFString)) as? String else { continue }
+            guard let name = IOHIDServiceClientCopyProperty(service, "Product" as CFString)?.takeRetainedValue() as? String else { continue }
             if name.hasPrefix("PMU tdie") {
                 tdie.append(service)
             } else if name.contains("tdie") || name.contains("MTR Temp") {
@@ -70,9 +70,8 @@ final class ThermalMonitor {
     }
 
     private func hidTemperature(_ service: AnyObject) -> Double? {
-        guard let event = owned(IOHIDServiceClientCopyEvent(ref(service), Self.temperatureEvent, 0, 0)) else { return nil }
-        let celsius = withExtendedLifetime(event) { IOHIDEventGetFloatValue(ref(event), Self.temperatureField) }
-        return plausible(celsius)
+        guard let event = IOHIDServiceClientCopyEvent(service, Self.temperatureEvent, 0, 0)?.takeRetainedValue() else { return nil }
+        return plausible(IOHIDEventGetFloatValue(event, Self.temperatureField))
     }
 
     // MARK: - AppleSMC (Intel die sensors)
@@ -138,14 +137,3 @@ private func plausible(_ celsius: Double) -> Double? {
 private func fourCC(_ s: String) -> UInt32 {
     s.utf8.reduce(0) { $0 << 8 | UInt32($1) }
 }
-
-// The private IOHID functions may be imported as Unmanaged, as OpaquePointer, or (when the SDK's
-// public hidsystem headers are also visible) as managed CF classes. These helpers make the code
-// independent of which: `owned` takes a +1 result into ARC, `ref` passes it back to a C call as
-// whatever type that parameter was imported as.
-private func owned<T: AnyObject>(_ value: Unmanaged<T>?) -> AnyObject? { value?.takeRetainedValue() }
-private func owned(_ value: OpaquePointer?) -> AnyObject? {
-    value.map { Unmanaged<AnyObject>.fromOpaque(UnsafeRawPointer($0)).takeRetainedValue() }
-}
-private func owned(_ value: AnyObject?) -> AnyObject? { value }
-private func ref<T>(_ object: AnyObject) -> T { unsafeBitCast(object, to: T.self) }
