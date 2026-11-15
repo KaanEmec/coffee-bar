@@ -1,16 +1,13 @@
 // Bridging header for the CoffeeBar app target.
-// Private IOKit HID functions that ThermalMonitor uses to read temperature sensors (the same set
-// as freedomtan/sensors). Declared here with plain CF types and without the SDK's
-// IOKit/hidsystem headers, so nothing clashes with Apple's declarations.
-// The client, service and event objects are CF objects, so Swift manages them with ARC. These
-// declarations carry no CF_RETURNS_RETAINED, so Swift imports the Create/Copy results as
-// Unmanaged and ThermalMonitor takes them with takeRetainedValue().
+// ThermalMonitor reads temperature sensors through IOHID. The SDK declares the client and service
+// types and some functions (hidsystem/IOHIDEventSystemClient.h, IOHIDServiceClient.h); the rest
+// below are private (the same set as freedomtan/sensors). CF_RETURNS_RETAINED lets Swift manage
+// the Create/Copy results with ARC.
 
-#include <CoreFoundation/CoreFoundation.h>
+#include <IOKit/hidsystem/IOHIDEventSystemClient.h>
+#include <IOKit/hidsystem/IOHIDServiceClient.h>
 
-CFTypeRef IOHIDEventSystemClientCreate(CFAllocatorRef allocator);
-int IOHIDEventSystemClientSetMatching(CFTypeRef client, CFDictionaryRef matching);
-CFArrayRef IOHIDEventSystemClientCopyServices(CFTypeRef client);
-CFTypeRef IOHIDServiceClientCopyProperty(CFTypeRef service, CFStringRef key);
-CFTypeRef IOHIDServiceClientCopyEvent(CFTypeRef service, int64_t type, int32_t options, int64_t timestamp);
-double IOHIDEventGetFloatValue(CFTypeRef event, int32_t field);
+IOHIDEventSystemClientRef _Nullable IOHIDEventSystemClientCreate(CFAllocatorRef _Nullable allocator) CF_RETURNS_RETAINED;
+int IOHIDEventSystemClientSetMatching(IOHIDEventSystemClientRef _Nonnull client, CFDictionaryRef _Nonnull matching);
+CFTypeRef _Nullable IOHIDServiceClientCopyEvent(IOHIDServiceClientRef _Nonnull service, int64_t type, int32_t options, int64_t timestamp) CF_RETURNS_RETAINED;
+double IOHIDEventGetFloatValue(CFTypeRef _Nonnull event, int32_t field);

@@ -13,4 +13,4 @@ let appBundleID = "com.coffeebar.app"
 /// SET THIS to your Apple Developer team ID (10 characters, e.g. "AB12CD34EF"; Xcode → Signing,
 /// or `codesign -dv --verbose=4 CoffeeBar.app` → TeamIdentifier). The helper only accepts XPC
 /// connections from an app signed with this team ID and the bundle ID above.
-let teamID = "TEAMID"
+let teamID = "6BAE823PNZ"

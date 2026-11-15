@@ -27,7 +27,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate
+        app.mainMenu = editMenu()
         withExtendedLifetime(delegate) { app.run() }
+    }
+
+    /// Never shown (LSUIElement), but its key equivalents make ⌘X/⌘C/⌘V/⌘A work in the Custom… field.
+    private static func editMenu() -> NSMenu {
+        let edit = NSMenu(title: "Edit")
+        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        let item = NSMenuItem()
+        item.submenu = edit
+        let main = NSMenu()
+        main.addItem(item)
+        return main
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -55,7 +70,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         refreshSystemState()
         refresh()
+        #if DEBUG
+        listenForTestActions()
+        #endif
     }
+
+    #if DEBUG
+    /// Debug builds only: scripted menu clicks for testing, e.g.
+    /// `xcrun swift -e 'import Foundation; DistributedNotificationCenter.default().post(name: .init("com.coffeebar.test"), object: "preset 0")'`.
+    /// Objects: "preset N", "custom SECONDS", "exit", "read" (sensors). State is echoed to stdout.
+    private func listenForTestActions() {
+        DistributedNotificationCenter.default().addObserver(forName: .init("com.coffeebar.test"), object: nil, queue: .main) { [weak self] note in
+            MainActor.assumeIsolated {
+                guard let self, let words = (note.object as? String)?.split(separator: " ") else { return }
+                switch (words.first, words.dropFirst().first.flatMap { Double($0) }) {
+                case ("preset", let i?): self.handle(.preset(Int(i)))
+                case ("custom", let s?): self.select(.custom(s))
+                case ("exit", _): self.handle(.exit)
+                case ("read", _): print("coffee-bar test: \(self.thermal.read())")
+                default: break
+                }
+                print("coffee-bar test: \(self.session.choice.map { "\($0)" } ?? "idle") · \(self.status ?? "") · \(self.temperature ?? "")")
+            }
+        }
+    }
+    #endif
 
     func applicationWillTerminate(_ notification: Notification) {
         guard tray != nil else { return } // test host

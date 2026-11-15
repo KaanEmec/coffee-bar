@@ -10,9 +10,9 @@ final class ThermalMonitor {
     let isAppleSilicon: Bool
 
     // HID objects are CF objects; ARC owns them. The client must outlive its services.
-    private var hidClient: AnyObject?
-    private var cpuServices: [AnyObject] = []
-    private var batteryService: AnyObject?
+    private var hidClient: IOHIDEventSystemClient?
+    private var cpuServices: [IOHIDServiceClient] = []
+    private var batteryService: IOHIDServiceClient?
     private var smc: io_connect_t = 0
     private var smcKeys: [String] = []
 
@@ -49,15 +49,15 @@ final class ThermalMonitor {
     private static let temperatureField: Int32 = 15 << 16  // IOHIDEventFieldBase(kIOHIDEventTypeTemperature)
 
     private func openHID() {
-        // Create/Copy results are +1 and imported as Unmanaged (see Bridging-Header.h).
-        guard let client = IOHIDEventSystemClientCreate(kCFAllocatorDefault)?.takeRetainedValue() else { return }
+        guard let client = IOHIDEventSystemClientCreate(kCFAllocatorDefault) else { return }
         hidClient = client
         _ = IOHIDEventSystemClientSetMatching(client, ["PrimaryUsagePage": 0xff00, "PrimaryUsage": 5] as CFDictionary)
-        let services = IOHIDEventSystemClientCopyServices(client)?.takeRetainedValue() as? [AnyObject] ?? []
-        var tdie: [AnyObject] = []
-        var fallback: [AnyObject] = []
+        let services = (IOHIDEventSystemClientCopyServices(client) as? [AnyObject] ?? [])
+            .map { unsafeBitCast($0, to: IOHIDServiceClient.self) }
+        var tdie: [IOHIDServiceClient] = []
+        var fallback: [IOHIDServiceClient] = []
         for service in services {
-            guard let name = IOHIDServiceClientCopyProperty(service, "Product" as CFString)?.takeRetainedValue() as? String else { continue }
+            guard let name = IOHIDServiceClientCopyProperty(service, "Product" as CFString) as? String else { continue }
             if name.hasPrefix("PMU tdie") {
                 tdie.append(service)
             } else if name.contains("tdie") || name.contains("MTR Temp") {
@@ -69,8 +69,8 @@ final class ThermalMonitor {
         cpuServices = tdie.isEmpty ? fallback : tdie
     }
 
-    private func hidTemperature(_ service: AnyObject) -> Double? {
-        guard let event = IOHIDServiceClientCopyEvent(service, Self.temperatureEvent, 0, 0)?.takeRetainedValue() else { return nil }
+    private func hidTemperature(_ service: IOHIDServiceClient) -> Double? {
+        guard let event = IOHIDServiceClientCopyEvent(service, Self.temperatureEvent, 0, 0) else { return nil }
         return plausible(IOHIDEventGetFloatValue(event, Self.temperatureField))
     }
 
@@ -121,12 +121,18 @@ final class ThermalMonitor {
 
     // MARK: - Battery
 
+    /// Hundredths of °C. Older Macs: AppleSmartBattery → Temperature. Apple Silicon on macOS 27
+    /// (checked on an M5 Pro): only AppleSmartBatteryPack → BatteryData → Temperature.
     private func smartBatteryTemperature() -> Double? {
-        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSmartBattery"))
-        guard service != 0 else { return nil }
-        defer { IOObjectRelease(service) }
-        let value = IORegistryEntryCreateCFProperty(service, "Temperature" as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue() as? Int
-        return value.flatMap { plausible(Double($0) / 100) }   // hundredths of °C
+        func property(_ className: String, _ key: String) -> Any? {
+            let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching(className))
+            guard service != 0 else { return nil }
+            defer { IOObjectRelease(service) }
+            return IORegistryEntryCreateCFProperty(service, key as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue()
+        }
+        let value = property("AppleSmartBattery", "Temperature") as? Int
+            ?? (property("AppleSmartBatteryPack", "BatteryData") as? [String: Any])?["Temperature"] as? Int
+        return value.flatMap { plausible(Double($0) / 100) }
     }
 }
 

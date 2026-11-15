@@ -16,7 +16,8 @@ final class AwakeController {
     private var connection: NSXPCConnection? // kept open while the app runs; its loss tells the helper to clean up
 
     var lidMode: LidMode {
-        if daemon.status == .notRegistered && !triedRegister {
+        // A never-registered daemon reports .notFound (seen on macOS 27), not .notRegistered.
+        if (daemon.status == .notRegistered || daemon.status == .notFound) && !triedRegister {
             triedRegister = true
             do { try daemon.register() } catch { NSLog("coffee-bar: helper register: \(error)") }
         }
@@ -96,19 +97,27 @@ final class AwakeController {
 
     /// Sends one message and waits for the reply. Returns the helper's result, false on an XPC
     /// error, nil on timeout. Replies arrive on an XPC queue, so waiting on main can't deadlock.
+    /// An XPC error is retried once: the message may have reached a helper that was just exiting
+    /// (its idle exit after a RunAtLoad start), and launchd starts a fresh one for the retry.
     private func callHelper(_ send: (HelperProtocol, @escaping (Bool) -> Void) -> Void) -> Bool? {
-        let done = DispatchSemaphore(value: 0)
-        var ok = false
-        let proxy = helperConnection().remoteObjectProxyWithErrorHandler { error in
-            NSLog("coffee-bar: helper XPC: \(error)")
-            done.signal()
+        for attempt in 1...2 {
+            let done = DispatchSemaphore(value: 0)
+            var ok = false
+            var failed = false
+            let proxy = helperConnection().remoteObjectProxyWithErrorHandler { error in
+                NSLog("coffee-bar: helper XPC: \(error)")
+                failed = true
+                done.signal()
+            }
+            guard let helper = proxy as? HelperProtocol else { return false }
+            send(helper) { result in
+                ok = result
+                done.signal()
+            }
+            guard done.wait(timeout: .now() + 5) == .success else { return nil }
+            if !failed || attempt == 2 { return ok }
         }
-        guard let helper = proxy as? HelperProtocol else { return false }
-        send(helper) { result in
-            ok = result
-            done.signal()
-        }
-        return done.wait(timeout: .now() + 5) == .success ? ok : nil
+        return false
     }
 
     private func helperConnection() -> NSXPCConnection {
