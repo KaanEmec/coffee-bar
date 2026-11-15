@@ -20,7 +20,6 @@ use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Power::{RegisterPowerSettingNotification, POWERBROADCAST_SETTING};
 use windows::Win32::System::SystemServices::GUID_LIDSWITCH_STATE_CHANGE;
 use windows::Win32::System::Threading::CreateMutexW;
-use windows::Win32::UI::HiDpi::{SetProcessDpiAwarenessContext, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2};
 use windows::Win32::UI::WindowsAndMessaging::*;
 
 const TIMER_ID: usize = 1;
@@ -186,7 +185,6 @@ fn main() {
         if GetLastError() == ERROR_ALREADY_EXISTS {
             return;
         }
-        let _ = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     }
     awake::recover_if_needed();
     std::panic::set_hook(Box::new(|_| awake::stop()));

@@ -26,6 +26,8 @@ linker = "C:/Users/<you>/AppData/Local/Microsoft/WinGet/Packages/MartinStorsjo.L
 rustflags = ["-C", "dlltool=<same bin folder>/llvm-dlltool.exe"]
 ```
 
+`build.rs` embeds the app icon and manifest (`app.rc`) with `llvm-windres`, which it finds next to that linker; set `WINDRES` to override.
+
 Don't use the plain `x86_64-pc-windows-gnu` target with LLVM's dlltool: the binaries crash at startup (broken import stubs).
 
 ### Build, test, run
