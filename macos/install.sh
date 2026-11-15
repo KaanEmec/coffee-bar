@@ -82,5 +82,11 @@ say "Installed coffee-bar $installed in $dest."
 if [ "$launch" = 1 ]; then
     open "$app"
     echo "   Look for the cup in the menu bar (it can hide behind the notch if the bar is full)."
-    echo "   For closed-lid mode, allow CoffeeBar once in System Settings → General → Login Items & Extensions."
+fi
+# On a fresh install, open the page where the closed-lid helper is approved. Upgrades keep the
+# approval (same Developer ID), so they skip this.
+if [ "$launch" = 1 ] && [ -z "$existing" ]; then
+    sleep 1   # let the app register its helper first, so it's in the list
+    open "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
+    printf '\n\033[1m👉 One time: turn on CoffeeBar under "Allow in the Background"\033[0m (System Settings → General →\n   Login Items & Extensions). This enables closed-lid mode.\n'
 fi

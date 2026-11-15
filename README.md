@@ -47,7 +47,14 @@ Paste this into **Terminal**:
 curl -fsSL https://github.com/KaanEmec/coffee-bar/releases/latest/download/install.sh | bash
 ```
 
-Then, once, allow CoffeeBar in **System Settings → General → Login Items & Extensions** (under *Allow in the Background*). This is what lets it stay awake with the lid closed.
+**After installing (one time):** the installer opens System Settings for you. Under **Allow in the Background**, turn on **CoffeeBar**. That's what lets it stay awake with the lid closed. Without it, CoffeeBar still keeps the Mac awake, as long as the lid stays open.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/approve-dark.png">
+  <img src="docs/approve-light.png" width="460" alt="System Settings → General → Login Items &amp; Extensions → Allow in the Background → CoffeeBar switched on">
+</picture>
+
+Can't find it later? It's at **System Settings → General → Login Items & Extensions**.
 
 ### 🪟 Windows (10 or 11, x64 or ARM64)
 
