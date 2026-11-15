@@ -24,7 +24,7 @@ jobs:
         shell: pwsh
         working-directory: windows
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install LLVM-MinGW and Rust targets
         run: |
@@ -85,7 +85,7 @@ jobs:
             if (Get-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Run -Name coffee-bar -ErrorAction SilentlyContinue) { throw "$ps uninstall left the Run value" }
           }
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: coffee-bar-windows
           path: windows/dist/*.zip

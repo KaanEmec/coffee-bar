@@ -88,6 +88,7 @@ try {
     # Start at login: the same value the app writes. An existing value keeps its on/off state;
     # the app itself updates the path on its next launch.
     if ($StartAtLogin) {
+        if (-not (Test-Path $RunKey)) { New-Item -Path $RunKey | Out-Null }   # missing on a fresh profile
         Set-ItemProperty -Path $RunKey -Name 'coffee-bar' -Value "`"$Exe`" --autostart"
         Remove-ItemProperty -Path $Approved -Name 'coffee-bar' -ErrorAction SilentlyContinue
     } elseif (Get-ItemProperty -Path $RunKey -Name 'coffee-bar' -ErrorAction SilentlyContinue) {

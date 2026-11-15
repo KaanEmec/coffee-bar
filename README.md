@@ -1,73 +1,129 @@
+<div align="center">
+
+<img src="docs/icon.png" width="128" alt="coffee-bar icon">
+
 # coffee-bar
 
-A tiny tray / menu-bar app that keeps your laptop awake for a chosen time (30 minutes to 24 hours, or a custom duration) — **even with the lid closed**. Everything it changes is undone when the time is up, when you exit, or after a crash. A heat fuse puts the machine to sleep if it gets too hot, for example in a closed bag.
+**Keep your laptop awake for as long as you choose, even with the lid closed.**
 
-- **Windows** (Rust): working; tested on Windows 11.
-- **macOS** (Swift, macOS 13+): builds and passes its tests; keep-awake, closed-lid helper and crash recovery checked on an M5 Pro. Closed-lid sleep and heat-fuse trip not yet tested by hand.
+A tiny menu-bar (macOS) and tray (Windows) app. Pick a time, close the lid, walk away.<br>
+When the time is up, everything goes back to normal.
 
-No window, just a tray icon and its menu: `Keep awake ›` (durations, `Custom…`), `Heat fuse`, `Start at login`, `Exit`.
+[![Latest release](https://img.shields.io/github/v/release/KaanEmec/coffee-bar?label=release&color=8a4b1f)](https://github.com/KaanEmec/coffee-bar/releases/latest)
+![macOS 13+](https://img.shields.io/badge/macOS-13%2B-1d1d1f?logo=apple)
+![Windows 10/11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4?logo=windows)
+[![MIT license](https://img.shields.io/badge/license-MIT-5a3a27)](LICENSE)
 
-```
-windows/   Rust app → coffee-bar.exe
-macos/     Swift app (XcodeGen project) → CoffeeBar.app + CoffeeBarHelper
-assets/    make-icons.ps1: regenerates every icon for both platforms
-```
+</div>
 
-## Windows
+<table>
+<tr>
+<th>macOS</th>
+<th>Windows</th>
+</tr>
+<tr>
+<td>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/macos-dark.png">
+  <img src="docs/macos-light.png" alt="coffee-bar menu in the macOS menu bar">
+</picture>
+</td>
+<td>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/windows-dark.png">
+  <img src="docs/windows-light.png" alt="coffee-bar menu in the Windows tray">
+</picture>
+</td>
+</tr>
+</table>
 
-### One-time setup (no Visual Studio needed)
+## ⚡ Install
 
-```powershell
-winget install --id Rustlang.Rustup -e
-winget install --id MartinStorsjo.LLVM-MinGW.UCRT -e
-rustup target add x86_64-pc-windows-gnullvm
-```
+### 🍎 macOS (13 or newer)
 
-`windows/.cargo/config.toml` builds for `x86_64-pc-windows-gnullvm`. Tell cargo where LLVM-MinGW lives in your **user** config `~/.cargo/config.toml`; the path depends on the machine:
-
-```toml
-[target.x86_64-pc-windows-gnullvm]
-linker = "C:/Users/<you>/AppData/Local/Microsoft/WinGet/Packages/MartinStorsjo.LLVM-MinGW.UCRT_<…>/llvm-mingw-<version>-ucrt-x86_64/bin/x86_64-w64-mingw32-clang.exe"
-rustflags = ["-C", "dlltool=<same bin folder>/llvm-dlltool.exe"]
-```
-
-`build.rs` embeds the app icon, manifest and version info with `llvm-windres`, which it finds next to that linker; set `WINDRES` to override.
-
-Don't use the plain `x86_64-pc-windows-gnu` target with LLVM's dlltool: the binaries crash at startup (broken import stubs).
-
-### Build, test, run
-
-```bash
-cd windows
-cargo test                                    # unit tests
-cargo test -- --ignored --test-threads=1      # also touch the real power plan / registry, then restore it
-cargo build --release                         # target/x86_64-pc-windows-gnullvm/release/coffee-bar.exe
-```
-
-`coffee-bar.exe --restore` only undoes leftover changes from a crashed run and exits.
-
-## macOS
-
-Needs a Mac with Xcode 15+ and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
+Paste this into **Terminal**:
 
 ```bash
-cd macos
-xcodegen generate
-xcodebuild -scheme CoffeeBar -derivedDataPath build/DD test
-xcodebuild -scheme CoffeeBar -configuration Release -derivedDataPath build/DD build
-ditto build/DD/Build/Products/Release/CoffeeBar.app /Applications/CoffeeBar.app
+curl -fsSL https://github.com/KaanEmec/coffee-bar/releases/latest/download/install.sh | bash
 ```
 
-The team is set in two places that must match: `DEVELOPMENT_TEAM` in `project.yml` and `teamID` in `Shared/HelperProtocol.swift`. The helper only accepts connections from an app signed by that team. Run the app from `/Applications` (SMAppService expects a stable path); on first launch, allow CoffeeBar in System Settings → General → Login Items & Extensions to enable closed-lid mode.
+Then, once, allow CoffeeBar in **System Settings → General → Login Items & Extensions** (under *Allow in the Background*). This is what lets it stay awake with the lid closed.
 
-## Icons
+### 🪟 Windows (10 or 11, x64 or ARM64)
+
+Paste this into **PowerShell** (no admin rights needed):
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File assets/make-icons.ps1
+irm https://github.com/KaanEmec/coffee-bar/releases/latest/download/install.ps1 | iex
 ```
 
-This regenerates `windows/icons/*` (32×32 raw RGBA files embedded in the exe, plus PNG previews and `app.ico`) and `macos/CoffeeBar/Assets.xcassets`.
+Run the same line again any time to **update**. The installers check every download against `SHA256SUMS`.
+
+## ☕ How to use it
+
+1. Click the **cup** in the menu bar or tray.
+2. Choose **Keep awake ›** and a duration: 30 minutes up to 24 hours, or **Custom…** (e.g. `45`, `90m`, `2h`, `1h30m`, `1:30`).
+3. That's it. The cup gets steam while it's active, and the menu counts down.
+
+Click the checked duration again to stop early.
+
+## ✨ What it does
+
+| | |
+|---|---|
+| 💤 **Lid closed? Still awake.** | Downloads, builds and remote sessions keep running with the lid shut. |
+| 🌙 **Screen still turns off** | Only the computer stays awake; the display sleeps as usual and saves power. |
+| ⏱️ **Always ends** | When the time is up the laptop sleeps normally again, straight away if the lid is closed. |
+| 🌡️ **Heat fuse** | If the laptop overheats (say, running hot in a closed bag), it stops and puts the laptop to sleep. On by default. |
+| ↩️ **Leaves no trace** | Every setting it changes is restored when the timer ends, when you quit, at shutdown and even after a crash. |
+| 🪶 **Tiny and native** | Swift on macOS, Rust on Windows. No window, no account, no telemetry. |
+
+## 🗑️ Uninstall
+
+**macOS**
+
+```bash
+curl -fsSL https://github.com/KaanEmec/coffee-bar/releases/latest/download/install.sh | bash -s -- --uninstall
+```
+
+**Windows**
+
+```powershell
+& ([scriptblock]::Create((irm https://github.com/KaanEmec/coffee-bar/releases/latest/download/install.ps1))) -Uninstall
+```
+
+<details>
+<summary><b>More install options</b></summary>
+
+&nbsp;
+
+| | macOS (`install.sh`) | Windows (`install.ps1`) |
+|---|---|---|
+| A specific version | `… \| bash -s -- --version 0.1.0` | `& ([scriptblock]::Create((irm …/install.ps1))) -Version 0.1.0` |
+| Don't open it after installing | `… \| bash -s -- --no-launch` | `… -NoLaunch` |
+| Start at login | from the menu: **Start at login** | from the menu, or `… -StartAtLogin` |
+| Installs to | `/Applications/CoffeeBar.app` | `%LOCALAPPDATA%\Programs\coffee-bar` + Start Menu shortcut |
+
+**Manual download:** grab the zip for your system from the [latest release](https://github.com/KaanEmec/coffee-bar/releases/latest). The macOS app is signed with a Developer ID but not yet notarized, so macOS blocks a browser-downloaded copy the first time (allow it under **System Settings → Privacy & Security → Open Anyway**). The one-liner above avoids that.
+
+</details>
+
+<details>
+<summary><b>How it works</b></summary>
+
+&nbsp;
+
+| | macOS | Windows |
+|---|---|---|
+| Stay awake | `IOPMAssertion` (prevent idle system sleep) | `SetThreadExecutionState` |
+| Lid closed | `pmset disablesleep` through a tiny root helper (`SMAppService`), approved once | Power plan lid action set to *Do nothing*, then restored |
+| Crash safety | The helper restores sleep the moment the app's connection drops, and again at boot | A `RunOnce` entry restores the lid action at the next login |
+| Heat fuse | CPU die (Apple Silicon / Intel), battery, thermal state | Hottest ACPI thermal zone, battery (if reported) |
+
+Building from source: see [BUILDING.md](BUILDING.md).
+
+</details>
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+[MIT](LICENSE)
