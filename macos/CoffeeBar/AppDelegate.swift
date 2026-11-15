@@ -24,6 +24,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // No MainMenu nib, so create the application and its delegate here.
     static func main() {
+        // `CoffeeBar --uninstall` (used by install.sh): remove the helper and the login item, then quit.
+        if CommandLine.arguments.contains("--uninstall") {
+            try? SMAppService.daemon(plistName: helperPlistName).unregister()
+            try? SMAppService.mainApp.unregister()
+            return
+        }
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate
