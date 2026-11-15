@@ -34,6 +34,10 @@ final class TrayMenu: NSObject, NSMenuDelegate {
         setUp(countdown, symbol: "timer")
         countdown.isEnabled = false
         menu.addItem(countdown)
+        // Right under the countdown, so a missing approval is the first thing seen.
+        setUp(lidMode, title: "Enable closed-lid mode…", symbol: "laptopcomputer", action: #selector(lidModeClicked))
+        lidMode.isHidden = true
+        menu.addItem(lidMode)
         menu.addItem(.separator())
 
         let durations = NSMenu()
@@ -51,10 +55,6 @@ final class TrayMenu: NSObject, NSMenuDelegate {
         setUp(keepAwake, title: "Keep awake", symbol: "cup.and.saucer")
         keepAwake.submenu = durations
         menu.addItem(keepAwake)
-
-        setUp(lidMode, title: "Enable closed-lid mode…", symbol: "laptopcomputer", action: #selector(lidModeClicked))
-        lidMode.isHidden = true
-        menu.addItem(lidMode)
         menu.addItem(.separator())
 
         setUp(heatFuse, title: "Heat fuse", symbol: "thermometer.medium", action: #selector(heatFuseClicked))
@@ -77,7 +77,7 @@ final class TrayMenu: NSObject, NSMenuDelegate {
                 heatFuse fuseOn: Bool, temperature: String?, startAtLogin loginOn: Bool,
                 needsApproval: Bool) {
         if let remaining {
-            countdown.title = "Awake · \(DurationParser.hms(remaining)) left"
+            countdown.title = "Awake · \(DurationParser.hms(remaining)) left" + (needsApproval ? " · keep lid open" : "")
         } else {
             countdown.title = status ?? "Not keeping awake"
         }
@@ -119,6 +119,10 @@ final class TrayMenu: NSObject, NSMenuDelegate {
     private func setUp(_ item: NSMenuItem, title: String = "", symbol: String? = nil, action: Selector? = nil) {
         item.title = title
         item.image = symbol.flatMap { NSImage(systemSymbolName: $0, accessibilityDescription: nil) }
+        // macOS 27 hides menu item images by default; the design (Menu F) shows them.
+        if #available(macOS 27, *), item.image != nil {
+            item.preferredImageVisibility = .visible
+        }
         item.action = action
         item.target = self
     }
