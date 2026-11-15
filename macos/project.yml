@@ -1,0 +1,76 @@
+# XcodeGen spec: run `xcodegen` in this folder to create CoffeeBar.xcodeproj.
+name: CoffeeBar
+options:
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""          # fill in your team ID
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_HARDENED_RUNTIME: YES
+
+targets:
+  CoffeeBar:
+    type: application
+    platform: macOS
+    sources:
+      - CoffeeBar
+      - Shared
+      - path: CoffeeBarHelper/com.coffeebar.helper.plist
+        buildPhase:
+          copyFiles:
+            destination: wrapper
+            subpath: Contents/Library/LaunchDaemons
+    dependencies:
+      - target: CoffeeBarHelper
+        embed: true
+        link: false
+        copy:
+          destination: executables   # Contents/MacOS
+      - sdk: IOKit.framework
+      - sdk: ServiceManagement.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.coffeebar.app
+        INFOPLIST_FILE: CoffeeBar/Info.plist
+        SWIFT_OBJC_BRIDGING_HEADER: CoffeeBar/Bridging-Header.h
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    scheme:
+      testTargets:
+        - CoffeeBarTests
+
+  CoffeeBarHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - path: CoffeeBarHelper
+        excludes:
+          - com.coffeebar.helper.plist
+      - Shared
+    settings:
+      base:
+        PRODUCT_NAME: CoffeeBarHelper
+        PRODUCT_BUNDLE_IDENTIFIER: com.coffeebar.helper
+        # Embeds an Info.plist so the code-signing identifier is the bundle ID.
+        GENERATE_INFOPLIST_FILE: YES
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        SKIP_INSTALL: YES
+
+  CoffeeBarTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - CoffeeBarTests
+    dependencies:
+      - target: CoffeeBar
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.coffeebar.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/CoffeeBar.app/Contents/MacOS/CoffeeBar
+        BUNDLE_LOADER: $(TEST_HOST)

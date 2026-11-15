@@ -1,0 +1,3 @@
+# Build with the LLVM MinGW toolchain (no Visual Studio needed). See README for setup.
+[build]
+target = "x86_64-pc-windows-gnullvm"
