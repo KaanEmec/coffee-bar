@@ -37,6 +37,7 @@ pub fn start() -> Result<(), String> {
             }
         }
     }
+    // System only, deliberately not ES_DISPLAY_REQUIRED: the screen may still turn off on its normal timeout.
     unsafe { SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED) };
     Ok(())
 }
