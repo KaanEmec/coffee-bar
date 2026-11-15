@@ -63,9 +63,11 @@ This regenerates `windows/icons/*` (32×32 raw RGBA files embedded in the exe, p
 
 ## Releasing
 
+No CI: each platform is built on its own machine and uploaded with `gh`.
+
 1. Bump the version in `windows/Cargo.toml` and `MARKETING_VERSION` in `macos/project.yml`, commit and push.
-2. On the Mac: `macos/release.sh` builds the universal, Developer ID-signed `build/CoffeeBar-macos.zip` (set `NOTARY_PROFILE` to also notarize).
-3. `gh release create vX.Y.Z macos/build/CoffeeBar-macos.zip --title vX.Y.Z --generate-notes`.
-4. Publishing the release starts `.github/workflows/release.yml`: it builds and tests the Windows exes, checks that the icon and version are embedded, tests `install.ps1`, then attaches `coffee-bar-windows-x64.zip`, `coffee-bar-windows-arm64.zip`, `install.ps1`, `install.sh` and a `SHA256SUMS` covering every zip.
+2. Mac: `macos/release.sh` builds the universal, Developer ID-signed `macos/build/CoffeeBar-macos.zip` (set `NOTARY_PROFILE` to also notarize).
+3. Windows PC: `windows/release.ps1` runs the tests, builds x64 and arm64, checks that the icon, manifest and version info are embedded, tests `install.ps1` against the new zip, and writes `windows/dist/coffee-bar-windows-x64.zip` and `-arm64.zip`.
+4. `gh release create vX.Y.Z <the three zips> macos/install.sh windows/install.ps1 SHA256SUMS`, where `SHA256SUMS` lists every zip (`shasum -a 256 *.zip`).
 
 Asset names carry no version, so `releases/latest/download/<file>` always points at the newest release; the installers rely on that.
