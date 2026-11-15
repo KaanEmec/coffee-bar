@@ -1,6 +1,6 @@
 [package]
 name = "coffee-bar"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Keep a Windows laptop awake for a chosen time, even with the lid closed"
 license = "MIT"
