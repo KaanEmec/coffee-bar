@@ -1,6 +1,11 @@
-# coffee-bar — code
+# coffee-bar
 
-Specs, architecture and task lists live in `../files/` (README, ARCHITECTURE, TASKS-windows, TASKS-macos).
+A tiny tray / menu-bar app that keeps your laptop awake for a chosen time (30 minutes to 24 hours, or a custom duration) — **even with the lid closed**. Everything it changes is undone when the time is up, when you exit, or after a crash. A heat fuse puts the machine to sleep if it gets too hot, for example in a closed bag.
+
+- **Windows** (Rust): working; tested on Windows 11.
+- **macOS** (Swift, macOS 13+): first version written, not yet built or tested.
+
+No window, just a tray icon and its menu: `Keep awake ›` (durations, `Custom…`), `Heat fuse`, `Start at login`, `Exit`.
 
 ```
 windows/   Rust app → coffee-bar.exe
